@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ViperArt</title>
+    
+    <!-- Importando Tailwind CSS para um design moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Importando a fonte Inter do Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Estilo base para o corpo da página */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Garante que a imagem no canvas fique com pixels nítidos, sem borrões */
+        canvas {
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-6 md:p-8 border border-white/20">
+        
+        <!-- Cabeçalho -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold">ViperArt</h1>
+            <p class="text-gray-300 mt-2">Transforme suas imagens em arte pixelada com um clique.</p>
+        </div>
+
+        <!-- Área de Controles -->
+        <div class="space-y-6">
+            <!-- Input de Arquivo -->
+            <div>
+                <label for="uploadImagem" class="block text-sm font-medium text-gray-300 mb-2">1. Escolha uma imagem:</label>
+                <input type="file" id="uploadImagem" accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-violet-500 file:text-white hover:file:bg-violet-600 cursor-pointer">
+            </div>
+
+            <!-- Controle de Tamanho do Pixel -->
+            <div>
+                <label for="tamanhoPixel" class="block text-sm font-medium text-gray-300 mb-2">2. Ajuste o tamanho do pixel: <span id="valorPixel" class="font-bold text-violet-400">10</span></label>
+                <input type="range" id="tamanhoPixel" min="2" max="50" value="10" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            </div>
+        </div>
+
+        <!-- Área de Exibição da Imagem -->
+        <div id="areaCanvas" class="mt-8 bg-gray-900/50 rounded-lg p-4 border border-dashed border-gray-600 hidden min-h-[200px] flex items-center justify-center">
+            <canvas id="canvasResultado" class="max-w-full max-h-[50vh] rounded-md"></canvas>
+            <p id="textoPlaceholder" class="text-gray-500">Sua imagem aparecerá aqui...</p>
+        </div>
+        
+        <!-- Botão de Download -->
+        <div class="mt-8 text-center">
+            <a id="btnDownload" href="#" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 opacity-50 pointer-events-none">
+                Baixar Pixel Art
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // --- Referências aos Elementos do DOM ---
+        const inputImagem = document.getElementById('uploadImagem');
+        const inputTamanhoPixel = document.getElementById('tamanhoPixel');
+        const valorPixelLabel = document.getElementById('valorPixel');
+        const canvas = document.getElementById('canvasResultado');
+        const ctx = canvas.getContext('2d');
+        const areaCanvas = document.getElementById('areaCanvas');
+        const textoPlaceholder = document.getElementById('textoPlaceholder');
+        const btnDownload = document.getElementById('btnDownload');
+        
+        let imagemOriginal = new Image();
+        let imagemCarregada = false;
+
+        // --- Funções ---
+
+        /**
+         * Desenha a imagem na tela e aplica o efeito de pixel art.
+         */
+        function processarEdesenharImagem() {
+            if (!imagemCarregada) return;
+
+            const tamanhoPixel = parseInt(inputTamanhoPixel.value);
+            
+            // Define as dimensões do canvas para serem as mesmas da imagem original
+            canvas.width = imagemOriginal.width;
+            canvas.height = imagemOriginal.height;
+            
+            // Desativa o anti-aliasing para manter os pixels nítidos
+            ctx.imageSmoothingEnabled = false;
+            
+            // Calcula as dimensões da imagem "pixelada" (menor)
+            const larguraPixelada = Math.floor(imagemOriginal.width / tamanhoPixel);
+            const alturaPixelada = Math.floor(imagemOriginal.height / tamanhoPixel);
+            
+            // 1. Desenha a imagem original em um tamanho muito pequeno.
+            // Isso efetivamente mescla os pixels.
+            ctx.drawImage(imagemOriginal, 0, 0, larguraPixelada, alturaPixelada);
+            
+            // 2. Desenha essa imagem minúscula de volta no canvas, mas em tamanho grande.
+            // Como o imageSmoothing está desativado, ele se expande em blocos perfeitos.
+            ctx.drawImage(canvas, 0, 0, larguraPixelada, alturaPixelada, 0, 0, imagemOriginal.width, imagemOriginal.height);
+            
+            // Atualiza o link de download
+            btnDownload.href = canvas.toDataURL('image/png');
+            btnDownload.download = 'pixel-art.png';
+            btnDownload.classList.remove('opacity-50', 'pointer-events-none');
+        }
+
+        // --- Event Listeners ---
+
+        // Evento para quando o usuário seleciona um arquivo
+        inputImagem.addEventListener('change', (e) => {
+            const arquivo = e.target.files[0];
+            if (!arquivo) return;
+            
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+                imagemOriginal.onload = () => {
+                    imagemCarregada = true;
+                    areaCanvas.classList.remove('hidden');
+                    textoPlaceholder.classList.add('hidden');
+                    canvas.classList.remove('hidden');
+                    processarEdesenharImagem();
+                };
+                imagemOriginal.src = event.target.result;
+            };
+            
+            reader.readAsDataURL(arquivo);
+        });
+
+        // Evento para quando o usuário muda o valor do controle deslizante
+        inputTamanhoPixel.addEventListener('input', (e) => {
+            valorPixelLabel.textContent = e.target.value;
+            // Processa novamente a imagem com o novo valor
+            if (imagemCarregada) {
+                processarEdesenharImagem();
+            }
+        });
+
+    </script>
+</body>
+</html>
