@@ -5,18 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ViperArt</title>
     
+    <!-- Favicon de Pixel Art (SVG embutido) com as iniciais "VA" (letras maiores) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='1' y='2' width='2' height='2' fill='%23A78BFA'/><rect x='2' y='4' width='2' height='2' fill='%23A78BFA'/><rect x='3' y='6' width='2' height='2' fill='%23A78BFA'/><rect x='4' y='8' width='2' height='2' fill='%23A78BFA'/><rect x='5' y='6' width='2' height='2' fill='%23A78BFA'/><rect x='6' y='4' width='2' height='2' fill='%23A78BFA'/><rect x='7' y='2' width='2' height='2' fill='%23A78BFA'/><rect x='9' y='2' width='2' height='8' fill='%23A78BFA'/><rect x='13' y='2' width='2' height='8' fill='%23A78BFA'/><rect x='11' y='2' width='2' height='2' fill='%23A78BFA'/><rect x='11' y='6' width='2' height='2' fill='%23A78BFA'/></svg>">
+    
     <!-- Importando Tailwind CSS para um design moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Importando a fonte Inter do Google Fonts -->
+    <!-- Importando as fontes do Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <style>
         /* Estilo base para o corpo da página */
         body {
             font-family: 'Inter', sans-serif;
+        }
+        
+        /* Classe para a fonte pixelizada */
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
         }
         
         /* Garante que a imagem no canvas fique com pixels nítidos, sem borrões */
@@ -34,7 +42,7 @@
         
         <!-- Cabeçalho -->
         <div class="text-center mb-6">
-            <h1 class="text-3xl md:text-4xl font-bold">ViperArt</h1>
+            <h1 class="text-3xl md:text-4xl font-bold font-pixel text-violet-400">ViperArt</h1>
             <p class="text-gray-300 mt-2">Transforme suas imagens em arte pixelada com um clique.</p>
         </div>
 
@@ -91,24 +99,30 @@
 
             const tamanhoPixel = parseInt(inputTamanhoPixel.value);
             
-            // Define as dimensões do canvas para serem as mesmas da imagem original
+            // Calcula as dimensões da imagem "pixelada" (menor)
+            const larguraPixelada = Math.floor(imagemOriginal.width / tamanhoPixel);
+            const alturaPixelada = Math.floor(imagemOriginal.height / tamanhoPixel);
+
+            // Cria um canvas temporário (fora da tela) para o pré-processamento
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = larguraPixelada;
+            tempCanvas.height = alturaPixelada;
+
+            // 1. Desenha a imagem original no canvas temporário, em tamanho pequeno.
+            // Isso efetivamente mescla os pixels.
+            tempCtx.drawImage(imagemOriginal, 0, 0, larguraPixelada, alturaPixelada);
+            
+            // Define as dimensões do canvas principal para serem as mesmas da imagem original
             canvas.width = imagemOriginal.width;
             canvas.height = imagemOriginal.height;
             
             // Desativa o anti-aliasing para manter os pixels nítidos
             ctx.imageSmoothingEnabled = false;
             
-            // Calcula as dimensões da imagem "pixelada" (menor)
-            const larguraPixelada = Math.floor(imagemOriginal.width / tamanhoPixel);
-            const alturaPixelada = Math.floor(imagemOriginal.height / tamanhoPixel);
-            
-            // 1. Desenha a imagem original em um tamanho muito pequeno.
-            // Isso efetivamente mescla os pixels.
-            ctx.drawImage(imagemOriginal, 0, 0, larguraPixelada, alturaPixelada);
-            
-            // 2. Desenha essa imagem minúscula de volta no canvas, mas em tamanho grande.
+            // 2. Desenha a imagem minúscula do canvas temporário de volta no canvas principal, em tamanho grande.
             // Como o imageSmoothing está desativado, ele se expande em blocos perfeitos.
-            ctx.drawImage(canvas, 0, 0, larguraPixelada, alturaPixelada, 0, 0, imagemOriginal.width, imagemOriginal.height);
+            ctx.drawImage(tempCanvas, 0, 0, larguraPixelada, alturaPixelada, 0, 0, canvas.width, canvas.height);
             
             // Atualiza o link de download
             btnDownload.href = canvas.toDataURL('image/png');
@@ -126,14 +140,17 @@
             const reader = new FileReader();
             
             reader.onload = (event) => {
-                imagemOriginal.onload = () => {
+                // Cria uma nova instância de Imagem para cada upload para garantir um estado limpo
+                const img = new Image();
+                img.onload = () => {
+                    imagemOriginal = img; // Atualiza a imagem original global
                     imagemCarregada = true;
                     areaCanvas.classList.remove('hidden');
                     textoPlaceholder.classList.add('hidden');
                     canvas.classList.remove('hidden');
                     processarEdesenharImagem();
                 };
-                imagemOriginal.src = event.target.result;
+                img.src = event.target.result;
             };
             
             reader.readAsDataURL(arquivo);
